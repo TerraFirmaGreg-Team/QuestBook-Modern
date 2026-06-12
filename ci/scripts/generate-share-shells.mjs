@@ -7,12 +7,16 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  QUEST_SHARE_SITE_NAME,
+  formatQuestShareOgTitle,
+} from './lib/quest-share-meta.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const qbmRoot = join(__dirname, '../..');
 
 const DEFAULT_OG_IMAGE = 'https://wiki.terrafirmagreg.team/logo.png';
-const SITE_NAME = 'TerraFirmaGreg Quest Book';
+const SITE_NAME = QUEST_SHARE_SITE_NAME;
 const DESCRIPTION_MAX = 160;
 
 const siteDir = process.argv[2];
@@ -250,7 +254,7 @@ for (const locale of locales) {
 
       const questTitle = row.title || row.id;
       const questShell = renderShell({
-        title: `${questTitle} — ${chapterTitle} | ${SITE_NAME}`,
+        title: formatQuestShareOgTitle(questTitle, chapterTitle),
         description: truncate(row.content || questTitle),
         canonicalUrl: questCanonical,
         spaUrlTarget: questCanonical,
