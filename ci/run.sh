@@ -1303,13 +1303,36 @@ verify_staged_quest_icons() {
   verify_quest_icon_atlases "$quest"
 }
 
+generate_share_shells() {
+  local site_dir="${SITE_OUTPUT_DIR:?SITE_OUTPUT_DIR required}"
+  if [[ -n "${SITE_BASE_URL:-}" ]]; then
+    ci_node generate-share-shells.mjs "$site_dir" "$SITE_BASE_URL"
+  else
+    ci_node generate-share-shells.mjs "$site_dir"
+  fi
+}
+
+patch_site_meta() {
+  local site_dir="${SITE_OUTPUT_DIR:?SITE_OUTPUT_DIR required}"
+  local args=("$site_dir")
+  if [[ -n "${SITE_BASE_URL:-}" ]]; then
+    args+=("$SITE_BASE_URL")
+  fi
+  if [[ -n "${OG_IMAGE_URL:-}" ]]; then
+    args+=("$OG_IMAGE_URL")
+  fi
+  ci_node patch-site-meta.mjs "${args[@]}"
+}
+
 assemble_deploy_site() {
   local site_dir="${SITE_OUTPUT_DIR:?SITE_OUTPUT_DIR required}"
 
   cp -f "$QBM_ROOT/language.json" "$site_dir/language.json"
   write_site_config
+  patch_site_meta
   stage_quest_export
   verify_staged_quest_icons
+  generate_share_shells
 
   if ! compgen -G "$site_dir/assets/*.js" > /dev/null; then
     echo "::error::Missing $site_dir/assets/*.js — quest site release may be corrupt" >&2
@@ -1339,7 +1362,7 @@ Granular (local debugging):
   env, print-versions, checkout-modpack, prepare-bundle-id, export-languages,
   install-mods, setup-hmc, launch-export, write-export-meta,
   resolve-bundle-id, extract-bundle, fetch-bundle,
-  fetch-quest-site, verify-staged-quest-icons, assemble-deploy-site,
+  fetch-quest-site, verify-staged-quest-icons, patch-site-meta, generate-share-shells, assemble-deploy-site,
   check-build-changes, probe-site-release, finalize-deploy-decision,
   collect-export-debug
 EOF
@@ -1386,6 +1409,14 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     verify-staged-quest-icons|optimize-quest-icons)
       load_config
       verify_staged_quest_icons "$@"
+      ;;
+    generate-share-shells)
+      load_config
+      generate_share_shells "$@"
+      ;;
+    patch-site-meta)
+      load_config
+      patch_site_meta "$@"
       ;;
     assemble-deploy-site)
       load_config
