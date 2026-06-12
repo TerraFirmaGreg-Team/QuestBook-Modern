@@ -1,9 +1,4 @@
 #!/usr/bin/env node
-/**
- * Generate share/ SEO shell HTML, sitemap.xml, and robots.txt for Quest Book deploy site.
- *
- * Usage: node ci/scripts/generate-share-shells.mjs <site-dir> [site-base-url]
- */
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -42,7 +37,7 @@ function resolveSiteBaseUrl() {
     const config = readJson(configPath);
     if (config.siteBaseUrl) return normalizeBase(config.siteBaseUrl);
   }
-  return normalizeBase(process.env.SITE_BASE_URL || 'https://wiki.terrafirmagreg.team/quest-book-modern');
+  return normalizeBase(process.env.SITE_BASE_URL || 'https://wiki.terrafirmagreg.team/modern/quest-book');
 }
 
 function escapeHtml(value) {

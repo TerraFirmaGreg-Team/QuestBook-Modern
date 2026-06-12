@@ -1281,14 +1281,41 @@ write_site_config() {
   local recipe_url="${RECIPE_BOOK_BASE_URL:-}"
   local guide_url="${FIELD_GUIDE_BASE_URL:-}"
 
+  local gitalk_block=""
+  if [[ "${GITALK_ENABLED:-}" == "true" && -n "${GITALK_CLIENT_ID:-}" ]]; then
+    local gitalk_admin_json="[]"
+    if [[ -n "${GITALK_ADMIN:-}" ]]; then
+      gitalk_admin_json="$(printf '%s' "$GITALK_ADMIN" | awk -F, '{
+        printf "["
+        for (i = 1; i <= NF; i++) {
+          gsub(/^[ \t]+|[ \t]+$/, "", $i)
+          if (i > 1) printf ","
+          printf "\"%s\"", $i
+        }
+        printf "]"
+      }')"
+    fi
+    gitalk_block=$',
+  "gitalk": {
+    "enabled": true,
+    "clientID": "'"${GITALK_CLIENT_ID}"'",
+    "clientSecret": "'"${GITALK_CLIENT_SECRET:-}"'",
+    "repo": "'"${GITALK_REPO:-}"'",
+    "owner": "'"${GITALK_OWNER:-}"'",
+    "admin": '"${gitalk_admin_json}"',
+    "proxy": "'"${GITALK_PROXY:-}"'",
+    "distractionFreeMode": '"${GITALK_DISTRACTION_FREE:-false}"'
+  }'
+  fi
+
   cat > "$site_dir/site-config.json" <<EOF
 {
   "siteBaseUrl": "${site_url}",
   "recipeBookBaseUrl": "${recipe_url}",
-  "fieldGuideBaseUrl": "${guide_url}"
+  "fieldGuideBaseUrl": "${guide_url}${gitalk_block}"
 }
 EOF
-  echo "Wrote site-config.json (siteBaseUrl=${site_url:-<empty>} recipeBookBaseUrl=${recipe_url:-<empty>} fieldGuideBaseUrl=${guide_url:-<empty>})"
+  echo "Wrote site-config.json (siteBaseUrl=${site_url:-<empty>} recipeBookBaseUrl=${recipe_url:-<empty>} fieldGuideBaseUrl=${guide_url:-<empty>} gitalk=${GITALK_ENABLED:-false})"
 }
 
 verify_staged_quest_icons() {
