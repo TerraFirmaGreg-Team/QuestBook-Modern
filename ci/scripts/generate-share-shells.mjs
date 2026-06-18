@@ -249,7 +249,7 @@ for (const locale of locales) {
 
       const questTitle = row.title || row.id;
       const questShell = renderShell({
-        title: formatQuestShareOgTitle(questTitle, chapterTitle),
+        title: formatQuestShareOgTitle(questTitle),
         description: truncate(row.content || questTitle),
         canonicalUrl: questCanonical,
         spaUrlTarget: questCanonical,
