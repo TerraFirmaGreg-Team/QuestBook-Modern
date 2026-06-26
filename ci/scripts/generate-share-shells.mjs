@@ -67,6 +67,31 @@ function truncate(text, max = DESCRIPTION_MAX) {
   return `${plain.slice(0, max - 1)}…`;
 }
 
+function loadLinkedQuestIdsByChapter(chaptersDir, chapterFilenames) {
+  const linkedByChapter = new Map();
+  if (!existsSync(chaptersDir)) return linkedByChapter;
+
+  for (const filename of chapterFilenames) {
+    const chapterPath = join(chaptersDir, `${filename}.json`);
+    if (!existsSync(chapterPath)) continue;
+
+    const { quests = [], questLinks = [] } = readJson(chapterPath);
+    const nativeIds = new Set(quests.map((quest) => quest.id).filter(Boolean));
+    const linkedIds = [];
+
+    for (const { linkedQuest: questId } of questLinks) {
+      if (!questId || nativeIds.has(questId) || linkedIds.includes(questId)) continue;
+      linkedIds.push(questId);
+    }
+
+    if (linkedIds.length > 0) {
+      linkedByChapter.set(filename, linkedIds);
+    }
+  }
+
+  return linkedByChapter;
+}
+
 function spaUrl(siteBase, { locale, chapter, quest }) {
   const params = new URLSearchParams({ lang: locale });
   if (chapter) params.set('chapter', chapter);
@@ -165,6 +190,11 @@ if (locales.length === 0) {
 }
 
 const shareRoot = join(siteDir, 'share');
+const chaptersDir = join(questExport, 'quests/chapters');
+const linkedQuestIdsByChapter = loadLinkedQuestIdsByChapter(
+  chaptersDir,
+  chapters.map((chapter) => chapter.filename).filter(Boolean),
+);
 /** @type {string[]} */
 const sitemapUrls = [];
 
@@ -172,13 +202,18 @@ let shellCount = 0;
 
 for (const locale of locales) {
   const searchPath = join(searchIndexDir, `${locale}.json`);
-  /** @type {Map<string, { chapterTitle?: string, quests: Array<{ id: string, title?: string, content?: string }> }>} */
   const byChapter = new Map();
+  const questMetaById = new Map();
 
   if (existsSync(searchPath)) {
     const payload = readJson(searchPath);
     for (const row of payload.quests ?? []) {
-      if (!row.id || !row.chapter) continue;
+      if (!row.id) continue;
+      questMetaById.set(
+        row.id,
+        questMetaById.get(row.id) ?? { title: row.title, content: row.content },
+      );
+      if (!row.chapter) continue;
       let bucket = byChapter.get(row.chapter);
       if (!bucket) {
         bucket = { chapterTitle: row.chapterTitle, quests: [] };
@@ -239,7 +274,14 @@ for (const locale of locales) {
     const questDir = join(localeDir, 'quests', filename);
     mkdirSync(questDir, { recursive: true });
 
-    for (const row of bucket?.quests ?? []) {
+    const questRows = [...(bucket?.quests ?? [])];
+    for (const questId of linkedQuestIdsByChapter.get(filename) ?? []) {
+      const meta = questMetaById.get(questId);
+      if (!meta) continue;
+      questRows.push({ id: questId, title: meta.title, content: meta.content });
+    }
+
+    for (const row of questRows) {
       const questCanonical = spaUrl(siteBase, {
         locale,
         chapter: filename,
